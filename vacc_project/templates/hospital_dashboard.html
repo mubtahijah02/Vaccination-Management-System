@@ -64,7 +64,7 @@
 				</div>
 				<div>
 					<span class="detail-label">Parent</span>
-					<strong>{{ record.child.parent.user.username }}</strong>
+					  <strong>{{ record.child.parent.user.get_full_name|default:record.child.parent.user.username }}</strong>
 					{% if record.child.parent.phone %}<span>{{ record.child.parent.phone }}</span>{% endif %}
 					{% if record.child.parent.user.email %}<span>{{ record.child.parent.user.email }}</span>{% endif %}
 				</div>

@@ -30,6 +30,9 @@ class ParentDashboardTests(TestCase):
 		)
 
 	def test_dashboard_only_shows_signed_in_parents_records(self):
+		self.parent_user.first_name = 'Amina'
+		self.parent_user.last_name = 'Rahman'
+		self.parent_user.save()
 		Child.objects.create(parent=self.parent, name='Own child', date_of_birth='2020-01-02')
 		Child.objects.create(parent=self.other_parent, name='Other child', date_of_birth='2021-03-04')
 		self.parent.phone = '555-0100'
@@ -40,10 +43,25 @@ class ParentDashboardTests(TestCase):
 
 		self.assertEqual(response.status_code, 200)
 		self.assertContains(response, 'parent-one')
+		self.assertContains(response, 'Amina Rahman')
 		self.assertContains(response, 'parent@example.test')
 		self.assertContains(response, '555-0100')
 		self.assertContains(response, 'Own child')
 		self.assertNotContains(response, 'Other child')
+
+	def test_parent_registration_saves_real_name(self):
+		response = self.client.post(reverse('register_parent'), {
+			'username': 'amina-rahman',
+			'first_name': 'Amina',
+			'last_name': 'Rahman',
+			'email': 'amina@example.test',
+			'password1': 'Amina-Clinic-Test-2026!',
+			'password2': 'Amina-Clinic-Test-2026!',
+		})
+
+		self.assertRedirects(response, reverse('parent_dashboard'))
+		user = CustomUser.objects.get(username='amina-rahman')
+		self.assertEqual(user.get_full_name(), 'Amina Rahman')
 
 	def test_parent_can_update_contact_details(self):
 		self.client.force_login(self.parent_user)

@@ -7,7 +7,7 @@
 	<div>
 		<p class="eyebrow">FAMILY ACCOUNT</p>
 		<h1>Your family dashboard</h1>
-		<p>Welcome, {{ request.user.username }}. Manage your profile and keep family-entered vaccine dates together.</p>
+		<p>Welcome, {{ request.user.get_full_name|default:request.user.username }}. Manage your profile and keep family-entered vaccine dates together.</p>
 	</div>
 	<div class="dashboard-actions">
 		<a class="button" href="{% url 'child_add' %}">Add a child</a>
@@ -25,6 +25,7 @@
 			<a href="{% url 'parent_profile_update' %}">Edit</a>
 		</div>
 		<dl class="profile-details">
+			<div><dt>Name</dt><dd>{{ request.user.get_full_name|default:'Not added' }}</dd></div>
 			<div><dt>Username</dt><dd>{{ request.user.username }}</dd></div>
 			<div><dt>Email</dt><dd>{{ request.user.email|default:'Not added' }}</dd></div>
 			<div><dt>Phone</dt><dd>{{ parent.phone|default:'Not added' }}</dd></div>
