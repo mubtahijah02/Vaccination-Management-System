@@ -59,8 +59,14 @@
 									<div class="vaccination-info">
 										<strong>{{ record.vaccine_name }}</strong>
 										<span>Dose {{ record.dose_number }} · Scheduled {{ record.scheduled_date|date:'M j, Y' }}</span>
+										<span>Hospital: {{ record.hospital.name|default:'Not assigned' }}</span>
 										{% if record.status == 'completed' %}
 											<span>Recorded administered {{ record.administered_date|date:'M j, Y' }}</span>
+											{% if record.completed_by_hospital %}
+												<span>Confirmed by {{ record.completed_by_hospital.name }}</span>
+											{% else %}
+												<span>Marked complete by your family</span>
+											{% endif %}
 										{% endif %}
 									</div>
 									<div class="vaccination-status-area">

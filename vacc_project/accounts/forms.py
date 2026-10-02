@@ -11,9 +11,22 @@ class ParentForm(UserCreationForm):
 
 
 class HospitalForm(UserCreationForm):
+    name = forms.CharField(max_length=50, label='Hospital name')
+    phone = forms.CharField(max_length=20, required=False)
+    address = forms.CharField(required=False, widget=forms.Textarea(attrs={'rows': 3}))
+
     class Meta:
         model = CustomUser
-        fields = ['username', 'email', 'password1', 'password2']
+        fields = ['username', 'email', 'name', 'phone', 'address', 'password1', 'password2']
+
+
+class HospitalProfileForm(forms.ModelForm):
+    class Meta:
+        model = Hospital
+        fields = ['name', 'phone', 'address']
+        widgets = {
+            'address': forms.Textarea(attrs={'rows': 3}),
+        }
 
 
 class ParentContactForm(forms.ModelForm):
@@ -42,13 +55,22 @@ class ChildForm(forms.ModelForm):
 
 class VaccinationRecordForm(forms.ModelForm):
     dose_number = forms.IntegerField(min_value=1, initial=1)
+    hospital = forms.ModelChoiceField(
+        queryset=Hospital.objects.none(),
+        required=False,
+        empty_label='No hospital selected',
+    )
 
     class Meta:
         model = VaccinationRecord
-        fields = ['vaccine_name', 'dose_number', 'scheduled_date']
+        fields = ['vaccine_name', 'dose_number', 'scheduled_date', 'hospital']
         widgets = {
             'scheduled_date': forms.DateInput(attrs={'type': 'date'}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['hospital'].queryset = Hospital.objects.order_by('name')
 
 
 class VaccinationCompletionForm(forms.Form):

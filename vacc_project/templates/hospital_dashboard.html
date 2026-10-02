@@ -3,13 +3,113 @@
 {% block title %}Hospital Dashboard | VaxCare{% endblock %}
 
 {% block content %}
-<section class="dashboard-heading">
-	<p class="eyebrow">HEALTHCARE ACCOUNT</p>
-	<h1>Hospital dashboard</h1>
-	<p>Welcome, {{ request.user.username }}.</p>
+<section class="dashboard-heading hospital-dashboard-heading">
+	<div>
+		<p class="eyebrow">HEALTHCARE ACCOUNT</p>
+		<h1>{{ hospital.name }} appointment desk</h1>
+		<p>Welcome, {{ request.user.username }}. Review appointments families assigned to your facility.</p>
+	</div>
+	<a class="button button-secondary" href="{% url 'hospital_profile_update' %}">Edit facility details</a>
 </section>
-<section class="dashboard-panel">
-	<p>Your account is ready.</p>
-	<a class="button" href="{% url 'logout' %}">Sign out</a>
+
+<section class="summary-grid" aria-label="Appointment summary">
+	<article class="summary-card">
+		<p class="eyebrow">SCHEDULED</p>
+		<strong>{{ scheduled_count }}</strong>
+		<span>Appointments in your queue</span>
+	</article>
+	<article class="summary-card summary-card-today">
+		<p class="eyebrow">TODAY</p>
+		<strong>{{ today_count }}</strong>
+		<span>Scheduled for today</span>
+	</article>
+	<article class="summary-card summary-card-completed">
+		<p class="eyebrow">CONFIRMED HERE</p>
+		<strong>{{ hospital_completed_count }}</strong>
+		<span>Completed by this facility</span>
+	</article>
 </section>
+
+<section class="hospital-section" aria-labelledby="appointments-title">
+	<div class="section-heading hospital-section-heading">
+		<div>
+			<p class="eyebrow">APPOINTMENT QUEUE</p>
+			<h2 id="appointments-title">Scheduled visits</h2>
+		</div>
+		<span class="section-count">{{ scheduled_count }} scheduled</span>
+	</div>
+
+	{% for record in scheduled_records %}
+		<article class="appointment-card">
+			<div class="appointment-card-heading">
+				<div>
+					<h3>{{ record.child.name }}</h3>
+					<p>Date of birth: {{ record.child.date_of_birth|date:'M j, Y' }}</p>
+				</div>
+				{% if record.scheduled_date < today %}
+					<span class="status-pill status-overdue">Past due</span>
+				{% else %}
+					<span class="status-pill">Scheduled</span>
+				{% endif %}
+			</div>
+
+			<div class="appointment-details">
+				<div>
+					<span class="detail-label">Vaccine</span>
+					<strong>{{ record.vaccine_name }} · Dose {{ record.dose_number }}</strong>
+				</div>
+				<div>
+					<span class="detail-label">Scheduled date</span>
+					<strong>{{ record.scheduled_date|date:'M j, Y' }}</strong>
+				</div>
+				<div>
+					<span class="detail-label">Parent</span>
+					<strong>{{ record.child.parent.user.username }}</strong>
+					{% if record.child.parent.phone %}<span>{{ record.child.parent.phone }}</span>{% endif %}
+					{% if record.child.parent.user.email %}<span>{{ record.child.parent.user.email }}</span>{% endif %}
+				</div>
+			</div>
+
+			<form class="complete-vaccination-form appointment-completion-form" method="post" action="{% url 'hospital_mark_completed' record.id %}">
+				{% csrf_token %}
+				<label for="hospital-administered-{{ record.id }}">Administered on</label>
+				<input id="hospital-administered-{{ record.id }}" type="date" name="administered_date" value="{{ today|date:'Y-m-d' }}" required>
+				<button class="button button-small" type="submit">Record completed</button>
+			</form>
+		</article>
+	{% empty %}
+		<div class="empty-state">
+			<h3>No scheduled visits</h3>
+			<p>Appointments appear here when a family selects {{ hospital.name }} while recording a vaccine date.</p>
+		</div>
+	{% endfor %}
+</section>
+
+<section class="hospital-section completed-section" aria-labelledby="completed-title">
+	<div class="section-heading hospital-section-heading">
+		<div>
+			<p class="eyebrow">RECORD HISTORY</p>
+			<h2 id="completed-title">Recently completed</h2>
+		</div>
+	</div>
+	<div class="completed-list">
+		{% for record in completed_records %}
+			<article class="completed-row">
+				<div>
+					<strong>{{ record.child.name }} · {{ record.vaccine_name }} dose {{ record.dose_number }}</strong>
+					<span>Administered {{ record.administered_date|date:'M j, Y' }}</span>
+				</div>
+				{% if record.completed_by_hospital == hospital %}
+					<span class="status-pill status-completed">Confirmed here</span>
+				{% else %}
+					<span class="status-pill">Family-entered</span>
+				{% endif %}
+			</article>
+		{% empty %}
+			<p class="empty-inline">No completed records assigned to this facility yet.</p>
+		{% endfor %}
+	</div>
+</section>
+
+<p class="medical-note">Only appointments assigned to this facility are shown. Confirm vaccine details with your clinical records.</p>
 {% endblock %}

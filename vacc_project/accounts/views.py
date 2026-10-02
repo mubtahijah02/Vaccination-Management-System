@@ -12,6 +12,7 @@ from django.views.decorators.http import require_POST
 from .forms import (
     ChildForm,
     HospitalForm,
+    HospitalProfileForm,
     ParentContactForm,
     ParentForm,
     VaccinationCompletionForm,
@@ -44,6 +45,17 @@ def _parent_profile(user):
     return parent
 
 
+def _hospital_profile(user):
+    hospital, _ = Hospital.objects.get_or_create(
+        user=user,
+        defaults={'name': user.get_full_name() or user.username},
+    )
+    if not hospital.name.strip():
+        hospital.name = user.get_full_name() or user.username
+        hospital.save(update_fields=['name'])
+    return hospital
+
+
 def register_parent(request):
     if request.method == 'POST':
         form = ParentForm(request.POST)
@@ -65,7 +77,12 @@ def register_hospital(request):
             user = form.save(commit = False)
             user.role = 'hospital'
             user.save()
-            Hospital.objects.create(user = user)
+            Hospital.objects.create(
+                user=user,
+                name=form.cleaned_data['name'],
+                phone=form.cleaned_data['phone'],
+                address=form.cleaned_data['address'],
+            )
             login(request, user)
             return redirect('hospital_dashboard')
     else:
@@ -103,7 +120,48 @@ def admin_dashboard(request):
 
 @role_required('hospital')
 def hospital_dashboard(request):
-    return render(request, 'hospital_dashboard.html')
+    hospital = _hospital_profile(request.user)
+    records = VaccinationRecord.objects.filter(hospital=hospital).select_related(
+        'child',
+        'child__parent__user',
+        'completed_by_hospital',
+    )
+    scheduled_records = records.filter(status=VaccinationRecord.SCHEDULED)
+    completed_records = records.filter(status=VaccinationRecord.COMPLETED).order_by(
+        '-administered_date',
+        '-created_at',
+    )[:10]
+    today = timezone.localdate()
+    return render(request, 'hospital_dashboard.html', {
+        'hospital': hospital,
+        'scheduled_records': scheduled_records,
+        'completed_records': completed_records,
+        'scheduled_count': scheduled_records.count(),
+        'today_count': scheduled_records.filter(scheduled_date=today).count(),
+        'hospital_completed_count': records.filter(
+            completed_by_hospital=hospital,
+            status=VaccinationRecord.COMPLETED,
+        ).count(),
+        'today': today,
+    })
+
+
+@role_required('hospital')
+def hospital_profile_update(request):
+    hospital = _hospital_profile(request.user)
+    form = HospitalProfileForm(request.POST or None, instance=hospital)
+    if request.method == 'POST' and form.is_valid():
+        form.save()
+        messages.success(request, 'Hospital contact details have been updated.')
+        return redirect('hospital_dashboard')
+    return render(request, 'parent_form.html', {
+        'form': form,
+        'title': 'Hospital details',
+        'eyebrow': 'HEALTHCARE ACCOUNT',
+        'intro': 'Keep your facility contact information up to date.',
+        'submit_label': 'Save hospital details',
+        'cancel_url': 'hospital_dashboard',
+    })
 
 
 @role_required('parent')
@@ -195,3 +253,26 @@ def vaccination_mark_completed(request, vaccination_id):
     else:
         messages.error(request, 'Enter a valid administered date to complete this record.')
     return redirect('parent_dashboard')
+
+
+@role_required('hospital')
+@require_POST
+def hospital_mark_completed(request, vaccination_id):
+    hospital = _hospital_profile(request.user)
+    record = get_object_or_404(
+        VaccinationRecord,
+        pk=vaccination_id,
+        hospital=hospital,
+        status=VaccinationRecord.SCHEDULED,
+    )
+    form = VaccinationCompletionForm(request.POST)
+    if form.is_valid():
+        record.status = VaccinationRecord.COMPLETED
+        record.administered_date = form.cleaned_data['administered_date']
+        record.completed_by_hospital = hospital
+        record.full_clean()
+        record.save(update_fields=['status', 'administered_date', 'completed_by_hospital'])
+        messages.success(request, f'{record.vaccine_name} was recorded as completed at your facility.')
+    else:
+        messages.error(request, 'Enter a valid administered date to complete this appointment.')
+    return redirect('hospital_dashboard')

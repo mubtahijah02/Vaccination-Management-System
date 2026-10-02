@@ -53,6 +53,20 @@ class VaccinationRecord(models.Model):
     ]
 
     child = models.ForeignKey(Child, on_delete=models.CASCADE, related_name='vaccinations')
+    hospital = models.ForeignKey(
+        Hospital,
+        on_delete=models.SET_NULL,
+        related_name='vaccination_appointments',
+        blank=True,
+        null=True,
+    )
+    completed_by_hospital = models.ForeignKey(
+        Hospital,
+        on_delete=models.SET_NULL,
+        related_name='confirmed_vaccinations',
+        blank=True,
+        null=True,
+    )
     vaccine_name = models.CharField(max_length=120)
     dose_number = models.PositiveSmallIntegerField(default=1)
     scheduled_date = models.DateField()
@@ -69,6 +83,10 @@ class VaccinationRecord(models.Model):
             raise ValidationError({'administered_date': 'Enter the date this dose was administered.'})
         if self.status == self.SCHEDULED and self.administered_date is not None:
             raise ValidationError({'administered_date': 'Scheduled doses cannot have an administered date.'})
+        if self.completed_by_hospital_id and self.status != self.COMPLETED:
+            raise ValidationError({'completed_by_hospital': 'Only completed doses can be confirmed by a hospital.'})
+        if self.completed_by_hospital_id and self.completed_by_hospital_id != self.hospital_id:
+            raise ValidationError({'completed_by_hospital': 'Only the assigned hospital can confirm this dose.'})
 
     def __str__(self):
         return f'{self.vaccine_name} dose {self.dose_number} for {self.child}'

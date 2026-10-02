@@ -100,6 +100,32 @@ class ParentDashboardTests(TestCase):
 
 		self.assertEqual(response.status_code, 404)
 
+	def test_parent_can_assign_vaccine_date_to_a_hospital(self):
+		hospital_user = CustomUser.objects.create_user(
+			username='assigned-clinic',
+			password='VaxCare-test-2026!',
+			role='hospital',
+		)
+		hospital = Hospital.objects.create(user=hospital_user, name='North Clinic')
+		child = Child.objects.create(
+			parent=self.parent,
+			name='Sam',
+			date_of_birth='2020-05-12',
+		)
+		self.client.force_login(self.parent_user)
+
+		response = self.client.post(reverse('vaccination_add', args=[child.id]), {
+			'vaccine_name': 'Example vaccine',
+			'dose_number': 1,
+			'scheduled_date': '2026-11-10',
+			'hospital': hospital.id,
+		})
+
+		self.assertRedirects(response, reverse('parent_dashboard'))
+		record = VaccinationRecord.objects.get(child=child)
+		self.assertEqual(record.hospital, hospital)
+		self.assertContains(self.client.get(reverse('parent_dashboard')), 'North Clinic')
+
 	def test_non_parent_cannot_open_parent_dashboard(self):
 		hospital_user = CustomUser.objects.create_user(
 			username='hospital-one',
@@ -112,3 +138,139 @@ class ParentDashboardTests(TestCase):
 		response = self.client.get(reverse('parent_dashboard'))
 
 		self.assertEqual(response.status_code, 403)
+
+
+class HospitalDashboardTests(TestCase):
+	def setUp(self):
+		self.hospital_user = CustomUser.objects.create_user(
+			username='clinic-one',
+			password='VaxCare-test-2026!',
+			role='hospital',
+		)
+		self.hospital = Hospital.objects.create(user=self.hospital_user, name='North Clinic')
+		self.other_hospital_user = CustomUser.objects.create_user(
+			username='clinic-two',
+			password='VaxCare-test-2026!',
+			role='hospital',
+		)
+		self.other_hospital = Hospital.objects.create(
+			user=self.other_hospital_user,
+			name='South Clinic',
+		)
+		self.parent_user = CustomUser.objects.create_user(
+			username='family-one',
+			password='VaxCare-test-2026!',
+			role='parent',
+		)
+		self.parent = Parent.objects.create(user=self.parent_user)
+
+	def make_record(self, hospital, child_name):
+		child = Child.objects.create(
+			parent=self.parent,
+			name=child_name,
+			date_of_birth='2020-01-02',
+		)
+		return VaccinationRecord.objects.create(
+			child=child,
+			hospital=hospital,
+			vaccine_name='Example vaccine',
+			dose_number=1,
+			scheduled_date='2026-11-10',
+		)
+
+	def test_hospital_dashboard_requires_hospital_login(self):
+		response = self.client.get(reverse('hospital_dashboard'))
+
+		self.assertEqual(response.status_code, 302)
+
+	def test_hospital_only_sees_appointments_assigned_to_it(self):
+		self.make_record(self.hospital, 'Assigned child')
+		self.make_record(self.other_hospital, 'Other clinic child')
+		self.client.force_login(self.hospital_user)
+
+		response = self.client.get(reverse('hospital_dashboard'))
+
+		self.assertEqual(response.status_code, 200)
+		self.assertContains(response, 'North Clinic appointment desk')
+		self.assertContains(response, 'Assigned child')
+		self.assertNotContains(response, 'Other clinic child')
+
+	def test_assigned_hospital_can_confirm_appointment(self):
+		record = self.make_record(self.hospital, 'Assigned child')
+		self.client.force_login(self.hospital_user)
+
+		response = self.client.post(
+			reverse('hospital_mark_completed', args=[record.id]),
+			{'administered_date': '2026-10-01'},
+		)
+
+		self.assertRedirects(response, reverse('hospital_dashboard'))
+		record.refresh_from_db()
+		self.assertEqual(record.status, VaccinationRecord.COMPLETED)
+		self.assertEqual(record.completed_by_hospital, self.hospital)
+		self.assertContains(self.client.get(reverse('hospital_dashboard')), 'Confirmed here')
+
+	def test_hospital_profile_can_be_updated(self):
+		self.client.force_login(self.hospital_user)
+
+		response = self.client.post(reverse('hospital_profile_update'), {
+			'name': 'North Clinic Main',
+			'phone': '555-0190',
+			'address': '10 Clinic Road',
+		})
+
+		self.assertRedirects(response, reverse('hospital_dashboard'))
+		self.hospital.refresh_from_db()
+		self.assertEqual(self.hospital.name, 'North Clinic Main')
+		self.assertEqual(self.hospital.phone, '555-0190')
+		self.assertEqual(self.hospital.address, '10 Clinic Road')
+
+	def test_hospital_cannot_confirm_another_hospitals_appointment(self):
+		record = self.make_record(self.other_hospital, 'Other clinic child')
+		self.client.force_login(self.hospital_user)
+
+		response = self.client.post(
+			reverse('hospital_mark_completed', args=[record.id]),
+			{'administered_date': '2026-10-01'},
+		)
+
+		self.assertEqual(response.status_code, 404)
+		record.refresh_from_db()
+		self.assertEqual(record.status, VaccinationRecord.SCHEDULED)
+
+	def test_hospital_cannot_confirm_with_a_future_date(self):
+		record = self.make_record(self.hospital, 'Assigned child')
+		self.client.force_login(self.hospital_user)
+
+		response = self.client.post(
+			reverse('hospital_mark_completed', args=[record.id]),
+			{'administered_date': '2099-01-01'},
+		)
+
+		self.assertRedirects(response, reverse('hospital_dashboard'))
+		record.refresh_from_db()
+		self.assertEqual(record.status, VaccinationRecord.SCHEDULED)
+
+	def test_parent_cannot_open_hospital_dashboard(self):
+		self.client.force_login(self.parent_user)
+
+		response = self.client.get(reverse('hospital_dashboard'))
+
+		self.assertEqual(response.status_code, 403)
+
+	def test_hospital_registration_saves_facility_details(self):
+		response = self.client.post(reverse('register_hospital'), {
+			'username': 'new-clinic',
+			'email': 'clinic@example.test',
+			'name': 'East Clinic',
+			'phone': '555-0188',
+			'address': '25 Health Avenue',
+			'password1': 'Unique-VaxCare-Test-2026!',
+			'password2': 'Unique-VaxCare-Test-2026!',
+		})
+
+		self.assertRedirects(response, reverse('hospital_dashboard'))
+		hospital = Hospital.objects.get(user__username='new-clinic')
+		self.assertEqual(hospital.name, 'East Clinic')
+		self.assertEqual(hospital.phone, '555-0188')
+		self.assertEqual(hospital.address, '25 Health Avenue')
