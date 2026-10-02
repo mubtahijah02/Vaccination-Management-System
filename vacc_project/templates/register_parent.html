@@ -1,6 +1,21 @@
-<h2>Register as Parent</h2>
-<form method="post">
-  {% csrf_token %}
-  {{ form.as_p }}
-  <button type="submit">Register</button>
-</form>
+{% extends 'base.html' %}
+
+{% block title %}Parent Registration | VaxCare{% endblock %}
+
+{% block content %}
+<section class="form-layout">
+  <div class="form-intro">
+    <p class="eyebrow">FAMILY ACCOUNT</p>
+    <h1>Register as a parent</h1>
+    <p>Create an account to get started.</p>
+  </div>
+  <div class="form-panel">
+    <form method="post">
+      {% csrf_token %}
+      {{ form.as_p }}
+      <button class="button" type="submit">Create parent account</button>
+    </form>
+    <p class="form-footnote">Already registered? <a href="{% url 'login' %}">Sign in</a></p>
+  </div>
+</section>
+{% endblock %}

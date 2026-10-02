@@ -26,4 +26,8 @@ urlpatterns = [
     path('dashboard/admin/', views.admin_dashboard, name='admin_dashboard'),
     path('dashboard/hospital/', views.hospital_dashboard, name='hospital_dashboard'),
     path('dashboard/parent/', views.parent_dashboard, name='parent_dashboard'),
+    path('dashboard/parent/profile/', views.parent_profile_update, name='parent_profile_update'),
+    path('dashboard/parent/children/add/', views.child_add, name='child_add'),
+    path('dashboard/parent/children/<int:child_id>/vaccinations/add/', views.vaccination_add, name='vaccination_add'),
+    path('dashboard/parent/vaccinations/<int:vaccination_id>/complete/', views.vaccination_mark_completed, name='vaccination_mark_completed'),
 ]

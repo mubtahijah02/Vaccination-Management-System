@@ -1,4 +1,96 @@
+{% extends 'base.html' %}
 
-<h2>Parent Dashboard</h2>
-<p>Welcome, {{ request.user.username }}</p>
-<a href="{% url 'logout' %}">Logout</a>
+{% block title %}Parent Dashboard | VaxCare{% endblock %}
+
+{% block content %}
+<section class="dashboard-heading parent-dashboard-heading">
+	<div>
+		<p class="eyebrow">FAMILY ACCOUNT</p>
+		<h1>Your family dashboard</h1>
+		<p>Welcome, {{ request.user.username }}. Manage your profile and keep family-entered vaccine dates together.</p>
+	</div>
+	<div class="dashboard-actions">
+		<a class="button" href="{% url 'child_add' %}">Add a child</a>
+		<a class="button button-secondary" href="{% url 'parent_profile_update' %}">Edit contact details</a>
+	</div>
+</section>
+
+<div class="parent-dashboard-grid">
+	<section class="dashboard-panel profile-panel" aria-labelledby="profile-title">
+		<div class="section-heading">
+			<div>
+				<p class="eyebrow">ACCOUNT</p>
+				<h2 id="profile-title">Your profile</h2>
+			</div>
+			<a href="{% url 'parent_profile_update' %}">Edit</a>
+		</div>
+		<dl class="profile-details">
+			<div><dt>Username</dt><dd>{{ request.user.username }}</dd></div>
+			<div><dt>Email</dt><dd>{{ request.user.email|default:'Not added' }}</dd></div>
+			<div><dt>Phone</dt><dd>{{ parent.phone|default:'Not added' }}</dd></div>
+			<div><dt>Address</dt><dd>{{ parent.address|default:'Not added'|linebreaksbr }}</dd></div>
+		</dl>
+	</section>
+
+	<section class="children-section" aria-labelledby="children-title">
+		<div class="section-heading children-heading">
+			<div>
+				<p class="eyebrow">FAMILY RECORDS</p>
+				<h2 id="children-title">Children and vaccine dates</h2>
+			</div>
+			<a href="{% url 'child_add' %}">Add child</a>
+		</div>
+
+		{% for child in children %}
+			<article class="child-card">
+				<div class="child-card-heading">
+					<div>
+						<h3>{{ child.name }}</h3>
+						<p>Date of birth: <time datetime="{{ child.date_of_birth|date:'Y-m-d' }}">{{ child.date_of_birth|date:'M j, Y' }}</time></p>
+					</div>
+					<a class="text-action" href="{% url 'vaccination_add' child.id %}">Add vaccine date</a>
+				</div>
+
+				{% with records=child.vaccinations.all %}
+					{% if records %}
+						<div class="vaccination-list">
+							{% for record in records %}
+								<div class="vaccination-row">
+									<div class="vaccination-info">
+										<strong>{{ record.vaccine_name }}</strong>
+										<span>Dose {{ record.dose_number }} · Scheduled {{ record.scheduled_date|date:'M j, Y' }}</span>
+										{% if record.status == 'completed' %}
+											<span>Recorded administered {{ record.administered_date|date:'M j, Y' }}</span>
+										{% endif %}
+									</div>
+									<div class="vaccination-status-area">
+										<span class="status-pill status-{{ record.status }}">{{ record.get_status_display }}</span>
+										{% if record.status == 'scheduled' %}
+											<form class="complete-vaccination-form" method="post" action="{% url 'vaccination_mark_completed' record.id %}">
+												{% csrf_token %}
+												<label for="administered-{{ record.id }}">Administered on</label>
+												<input id="administered-{{ record.id }}" type="date" name="administered_date" value="{{ today|date:'Y-m-d' }}" required>
+												<button class="button button-small" type="submit">Mark completed</button>
+											</form>
+										{% endif %}
+									</div>
+								</div>
+							{% endfor %}
+						</div>
+					{% else %}
+						<p class="empty-inline">No vaccine dates recorded for this child yet.</p>
+					{% endif %}
+				{% endwith %}
+			</article>
+		{% empty %}
+			<div class="empty-state">
+				<h3>No child profiles yet</h3>
+				<p>Add a child to start keeping your family's vaccine dates in one place.</p>
+				<a class="button" href="{% url 'child_add' %}">Add a child</a>
+			</div>
+		{% endfor %}
+
+		<p class="medical-note">Dates are entered by your family. Follow your child’s healthcare professional for vaccine timing and medical advice.</p>
+	</section>
+</div>
+{% endblock %}

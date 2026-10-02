@@ -1,10 +1,28 @@
 
-<h1>Child Vaccination Management System</h1>
-<p>Welcome! Please login or register to continue.</p>
+{% extends 'base.html' %}
 
-<a href="{% url 'login' %}">Login</a>
+{% block title %}VaxCare | Child Vaccination Management{% endblock %}
 
-<p>New here? Register as:</p>
-<a href="{% url 'register_parent' %}">Parent</a>
-<a href="{% url 'register_hospital' %}">Hospital</a>
+{% block content %}
+<section class="home-layout">
+	<div class="home-copy">
+		<p class="eyebrow">CHILD IMMUNIZATION</p>
+		<h1>Child Vaccination <em>Management</em></h1>
+		<p>Keep vaccination care organized for families and hospitals.</p>
+		<a class="button" href="{% url 'login' %}">Sign in to your account</a>
+	</div>
+	<section class="access-panel" aria-labelledby="access-title">
+		<p class="eyebrow">GET STARTED</p>
+		<h2 id="access-title">Create an account</h2>
+		<a class="access-link" href="{% url 'register_parent' %}">
+			<span><strong>Parent</strong><small>Register a family account</small></span>
+			<span class="access-arrow" aria-hidden="true">&#8594;</span>
+		</a>
+		<a class="access-link" href="{% url 'register_hospital' %}">
+			<span><strong>Hospital</strong><small>Register a hospital account</small></span>
+			<span class="access-arrow" aria-hidden="true">&#8594;</span>
+		</a>
+	</section>
+</section>
+{% endblock %}
 

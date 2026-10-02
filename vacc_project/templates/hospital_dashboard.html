@@ -1,4 +1,15 @@
+{% extends 'base.html' %}
 
-<h2>Hospital Dashboard</h2>
-<p>Welcome, {{ request.user.username }}</p>
-<a href="{% url 'logout' %}">Logout</a>
+{% block title %}Hospital Dashboard | VaxCare{% endblock %}
+
+{% block content %}
+<section class="dashboard-heading">
+	<p class="eyebrow">HEALTHCARE ACCOUNT</p>
+	<h1>Hospital dashboard</h1>
+	<p>Welcome, {{ request.user.username }}.</p>
+</section>
+<section class="dashboard-panel">
+	<p>Your account is ready.</p>
+	<a class="button" href="{% url 'logout' %}">Sign out</a>
+</section>
+{% endblock %}

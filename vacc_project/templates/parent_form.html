@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }} | VaxCare{% endblock %}
+
+{% block content %}
+<section class="form-layout">
+  <div class="form-intro">
+    <p class="eyebrow">{{ eyebrow }}</p>
+    <h1>{{ title }}</h1>
+    <p>{{ intro }}</p>
+  </div>
+  <div class="form-panel">
+    <form method="post">
+      {% csrf_token %}
+      {{ form.as_p }}
+      <button class="button" type="submit">{{ submit_label }}</button>
+    </form>
+    <p class="form-footnote"><a href="{% url cancel_url %}">Back to dashboard</a></p>
+  </div>
+</section>
+{% endblock %}

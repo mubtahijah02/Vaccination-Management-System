@@ -1,0 +1,45 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Child Vaccination Management{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'accounts/site.css' %}">
+</head>
+<body>
+  <div class="site-shell">
+    <header class="topbar">
+      <a class="brand" href="{% url 'home' %}">
+        <span class="brand-mark" aria-hidden="true">+</span>
+        <span class="brand-name">VaxCare<span class="brand-caption">CHILD HEALTH</span></span>
+      </a>
+      <nav class="top-nav" aria-label="Main navigation">
+        {% if request.user.is_authenticated %}
+          <span class="nav-user">{{ request.user.username }}</span>
+          <a class="nav-link" href="{% url 'logout' %}">Sign out</a>
+        {% else %}
+          <a class="nav-link" href="{% url 'login' %}">Sign in</a>
+          <a class="nav-button" href="{% url 'register_parent' %}">Create account</a>
+        {% endif %}
+      </nav>
+    </header>
+
+    <main class="page-frame">
+      {% if messages %}
+        <div class="flash-messages" aria-live="polite">
+          {% for message in messages %}
+            <p class="flash-message flash-{{ message.tags|default:'info' }}">{{ message }}</p>
+          {% endfor %}
+        </div>
+      {% endif %}
+      {% block content %}{% endblock %}
+    </main>
+
+    <footer class="site-footer">
+      <span>VaxCare</span>
+      <span>Child Vaccination Management System</span>
+    </footer>
+  </div>
+</body>
+</html>

@@ -1,8 +1,21 @@
-<h2>Login</h2>
-<form method="post">
-  {% csrf_token %}
-  {{ form.as_p }}
-  <button type="submit">Login</button>
-</form>
-<p>Register as <a href="{% url 'register_parent' %}">Parent</a> or
-  <a href="{% url 'register_hospital' %}">Hospital</a></p>
+{% extends 'base.html' %}
+
+{% block title %}Sign In | VaxCare{% endblock %}
+
+{% block content %}
+<section class="form-layout">
+  <div class="form-intro">
+    <p class="eyebrow">ACCOUNT ACCESS</p>
+    <h1>Welcome back</h1>
+    <p>Sign in to continue to your account.</p>
+  </div>
+  <div class="form-panel">
+    <form method="post">
+      {% csrf_token %}
+      {{ form.as_p }}
+      <button class="button" type="submit">Sign in</button>
+    </form>
+    <p class="form-footnote">New here? Register as a <a href="{% url 'register_parent' %}">parent</a> or <a href="{% url 'register_hospital' %}">hospital</a>.</p>
+  </div>
+</section>
+{% endblock %}
